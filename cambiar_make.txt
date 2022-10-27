@@ -1,0 +1,2 @@
+Para compilar otro archivo distinto a tarea3.cpp, cambiar en el make los "tarea3.cpp" por el nombre del archivo a ejecutar
+Para correr el archivo compilado por el make escribir en consola "./tarea3"
