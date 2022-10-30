@@ -106,7 +106,22 @@ int main(int argc, char **argv)
     printf("\n");
   }
 
-  printf("\nTiempo que demoró en realizar el calculo: %f\n", time);
+  printf("\nTiempo que demoró en realizar el calculo con threads: %f\n", time);
+
+  unsigned t2 = clock();
+
+  //multiplicación sin threads
+  for(int i = 0; i < tamano*tamano; i++){
+    for(int n = 0; n < tamano; n++){
+      matriz3[(int) i / tamano][i % tamano] = matriz[(int) i / tamano][n] * matriz2[n][i % tamano];
+    }
+  }
+
+  unsigned t3 = clock();
+
+  double time2 = (double(t3-t2) / CLOCKS_PER_SEC);
+
+  printf("\nTiempo que demoró en realizar el calculo sin threads: %f\n", time2);
 
   return 0;
 }
