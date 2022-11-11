@@ -1,159 +1,163 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <time.h>
+#include <dirent.h>
 #include "sthread.h"
+#include <vector>
+#include <fstream>
 
-int o = 0;
+using namespace std;
+int tamano;
 
-int **matriz1, **matriz2, **matriz3;
+int matriz1[10000][10000], matriz2[10000][10000], matriz3[10000][10000], matriz4[10000][10000];
 
-void multiplicacion(int tamano){
+void multiplicacion(int nro_thread){
 
-  int fila = o / tamano;
-  int columna = o % tamano;
-  for(int n = 0; n<tamano; n++){
-    *(*(matriz3+fila)+columna) += *(*(matriz1+fila)+n) * *(*(matriz2+n)+columna);
+  //CALCULAR LA COLUMNA Y LA FILA CON LA QUE SE ESTÁ TRABAJANDO
+  int fila = nro_thread / tamano;
+  int columna = nro_thread % tamano;
+
+  //OBTENER EL VALOR DE LA CASILLA CORRESPONDIENTE DE LA MATRIZ RESULTANTE
+  for(int i = 0; i < tamano; i++){
+    matriz3[fila][columna] += matriz1[fila][i] * matriz2[i][columna];
   }
-  sthread_exit(0);
-
 }
 
+void txt_a_matriz(string nombre_archivo){
+  //ABRIR EL ARCHIVO DE LAS MATRICES
+  ifstream fp;
+  fp.open(nombre_archivo);
 
-int main(int argc, char **argv)
-{
+  string linea;
+  if(fp.is_open()){
+    //LEER LA PRIMERA LINEA DEL ARCHIVO ".txt" PARA OBTENER EL TAMAÑO DE LAS MATRICES
+    getline(fp, linea);
+    tamano = stoi(linea);
+    printf("Matriz %dx%d:\n", tamano, tamano);
+
+    int fila = 0;
+
+    //TRASPASAR LOS VALORES DE LAS MATRICES DESDE EL ".txt" A LAS MATRICES DEL CÓDIGO 
+    while(getline(fp, linea)){
+      for(int i = 0; i < tamano; i++){
+        int hola = linea[i] - '0';
+        if(fila < tamano){
+          matriz1[fila][i] = hola;
+        }
+        else if(fila >= tamano && fila < 2*tamano){
+          matriz2[fila-tamano][i] = hola;
+        }
+      }
+      fila += 1;
+    }
+  }
+}
+
+int main(){
+
+  //ABRIR EL DIRECTORIO
+  DIR* dir = opendir(".");
+
+  vector <string> archivos_a_abrir; 
+
+  //CHEQUEAR ERROR AL ABRIR DIRECTORIO
+  if(dir == NULL){
+    return 1;
+  }
+
+  //GUARDAR EN UN VECTOR DE STRINGS LOS NOMBRES DE LOS ARCHIVOS PRESENTES EN EL DIRECTORIO QUE 
+  //CORRESPONDEN A MATRICES BAJO EL CRITERO DE SI EL ARCHIVO TIENE EL FORMATO "matrices-N.txt"
+  struct dirent* entity;
+  entity = readdir(dir);
+  while(entity != NULL){
+    string nombre = entity->d_name;
+    long unsigned int error = -1;
+    if(nombre.find(".txt") != error && nombre.find("matrices-") != error){
+      archivos_a_abrir.push_back(nombre);
+    }
+    entity = readdir(dir);
+  }
+  closedir(dir);
+
+  for(unsigned long int i = 0; i < archivos_a_abrir.size(); i++){
+    txt_a_matriz(archivos_a_abrir[i]);
+
+    //"RE INICIAR" LA MATRIZ4 (DONDE VAN RESULTADOS DE LA MULTIPLICACIÓN CON THREADS), VOLVERLA A SU ESTADO ORIGINAL (PUROS CEROS)
+    for(int a = 0; a < tamano; a++){
+      for(int b = 0; b < tamano; b++){
+          matriz3[a][b] = 0;
+      }
+    }
+    //"RE INICIAR" LA MATRIZ4 (DONDE VAN RESULTADOS DE LA MULTIPLICACIÓN SIN THREADS), VOLVERLA A SU ESTADO ORIGINAL (PUROS CEROS)
+    for(int a = 0; a < tamano; a++){
+      for(int b = 0; b < tamano; b++){
+          matriz3[a][b] = 0;
+      }
+    }
+
+    //CREACION DE LOS THREADS
+    sthread_t threads[tamano*tamano];
+
+    //INICIAR CRONÓMETRO PARA MULTIPLICACIÓN SIN THREADS
+    unsigned t0 = clock();
+
+    //
+    if(tamano > 150){
+      for(int a = 0; a < tamano*tamano; a++){
+        sthread_create(&threads[a], &multiplicacion, a);
+        sthread_join(threads[a]);
+      }
+    }
+    else{
+      for(int a = 0; a < tamano*tamano; a++){
+        sthread_create(&threads[a], &multiplicacion, a);
+      }
+      for(int a = 0; a < tamano*tamano; a++){
+        sthread_join(threads[a]);
+      }
+    }
+
+    //FINALIZAR CRONÓMETRO Y CALCULAR TIEMPO DE EJECUCIÓN
+    unsigned t1 = clock();
+
+    double time = (double(t1-t0) / CLOCKS_PER_SEC);
+
+    printf("\nTiempo que demoró en realizar el calculo con threads: %f\n", time);
+
+    //INICIAR CRONÓMETRO PARA MULTIPLICACIÓN SIN THREADS
+    unsigned t2 = clock();
     
-  //abrir el archivo con las matrices
-  FILE *fp;
-  fp = fopen("matrices-n.txt", "r");
+    //MULTIPLICACIÓN DE THREADS
+    for(int i = 0; i < tamano*tamano; i++){
+      for(int n = 0; n < tamano; n++){
+        int fila = i /tamano;
+        int columna = i % tamano;
+        matriz4[fila][columna] += matriz1[fila][n] * matriz2[n][columna];
+      }
+    }
 
-  //CHEQUEO ERROR AL ABRIR ARCHIVO
-  if(fp == NULL){
-    printf("No se puede abrir el archivo\n");
-  }
+    //FINALIZAR CRONÓMETRO Y CALCULAR TIEMPO DE EJECUCIÓN
+    unsigned t3 = clock();
 
+    double time2 = (double(t3-t2) / CLOCKS_PER_SEC);
 
-  //obtencion del tamaño de las matrices
-  char tamano_char[10], *linea;
-  fgets(tamano_char, sizeof(tamano_char), fp);
-  int tamano = atoi(tamano_char);
+    printf("\nTiempo que demoró en realizar el calculo sin threads: %f\n\n", time2); 
 
-  //creación de las matrices con el tamaño adecuado
-  matriz1 = new int*[tamano]; //reservando memoria para las filas
-  for(int i = 0; i<tamano;i++){
-    matriz1[i] = new int[tamano]; //reservando memoria para las columnas
-  }
-
-  matriz2 = new int*[tamano]; //reservando memoria para las filas
-  for(int i = 0; i<tamano;i++){
-    matriz2[i] = new int[tamano]; //reservando memoria para las columnas
-  }
-
-  matriz3 = new int*[tamano]; //reservando memoria para las filas
-  for(int i = 0; i<tamano;i++){
-    matriz3[i] = new int[tamano]; //reservando memoria para las columnas
-  }
-
-  printf("El tamaño de las matrices es: %d\n", tamano);
-
-  int fila = 0;
-  
-  //transformar las matrices del .txt a un arreglo bidimensional
-  size_t len=0;
-  while(getline(&linea, &len, fp)!=-1){
+    //MOSTRAR POR PANTALLA RESULTADOS DE MULTIPLICACIONES CON Y SIN THREADS
+    /*
+    printf("Resultado de la multiplicación con threads\n");
     for(int i = 0; i < tamano; i++){
-      if(fila < tamano){
-        *(*(matriz1+fila)+i) = (int)(linea[i] - '0');
+      for(int j = 0; j < tamano; j++){
+        printf("%d ", matriz3[i][j]);
       }
-      else if(fila >= tamano){
-        *(*(matriz2+fila-tamano)+i) = (int)(linea[i] - '0');
+      printf("\n");
+    }
+    printf("\n");
+    printf("Resultado de la multiplicación sin threads\n");
+    for(int i = 0; i < tamano; i++){
+      for(int j = 0; j < tamano; j++){
+        printf("%d ", matriz4[i][j]);
       }
+      printf("\n");
     }
-    fila += 1;
+    */    
   }
-  free(linea);
-  fclose(fp);
-
-  /*
-  //mostrar por pantalla las 2 matrices a multiplicar
-  printf("primera matriz: \n");
-  for(int a = 0; a < tamano; a++){
-    for(int b = 0; b < tamano; b++){
-      printf("%d ", *(*(matriz1+a)+b));
-    }
-    printf("\n");
-  }
-
-  printf("\n");
-
-  printf("segunda matriz: \n");
-  for(int a = 0; a < tamano; a++){
-    for(int b = 0; b < tamano; b++){
-      printf("%d ", *(*(matriz2+a)+b));
-    }
-    printf("\n");
-  }
-
-  printf("\n");
-  */
-
-
-  //multiplicacion con threads
-
-  unsigned t0 = clock();
-
-  //creación de los threads
-  sthread_t threads[tamano*tamano];
-
-  //creando los threads para cada casilla de la matriz
-  for(int i = 0; i < tamano*tamano; i++){
-    sthread_create(&threads[i], &multiplicacion, tamano);
-    sthread_join(threads[i]);
-    o += 1;
-  }
-
-  //finalizar cronómetro y calcular tiempo de ejecución 
-  unsigned t1 = clock();
-
-  double time = (double(t1-t0) / CLOCKS_PER_SEC);
-
-  printf("\nTiempo que demoró en realizar el calculo con threads: %f\n", time);
-
-  /*
-  //mostrar por pantalla el resultado de la multiplicación
-  for(int a = 0; a < tamano; a++){
-    for(int b = 0; b < tamano; b++){
-      printf("%d ", *(*(matriz3+a)+b));
-    }
-    printf("\n");
-  }
-  */
-
-  unsigned t2 = clock();
-
-  for(int i = 0; i < tamano*tamano; i++){
-    for(int n = 0; n < tamano; n++){
-      int fila = i /tamano;
-      int columna = i % tamano;
-      *(*(matriz3+fila)+columna) += *(*(matriz1+fila)+n) * *(*(matriz2+n)+columna);
-    }
-  }
-
-  unsigned t3 = clock();
-
-  double time2 = (double(t3-t2) / CLOCKS_PER_SEC);
-
-  printf("\nTiempo que demoró en realizar el calculo sin threads: %f\n", time2);
-
-  
-  for(int i = 0; i < tamano; i++){
-    delete[] matriz1[i];
-    delete[] matriz2[i];
-    delete[] matriz3[i];
-  }
-
-  delete[] matriz1;
-  delete[] matriz2;
-  delete[] matriz3;
-  
-
 }
