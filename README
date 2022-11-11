@@ -1,1 +1,43 @@
-HOLA
+Nombre: Pablo Arellano
+Rol: 202073034-2
+Paralelo: 1
+
+Nombre: Cristóbal Álvarez Alvear
+Rol: 202073090-3
+Paralelo: 1
+
+IMPORTANTE:
+
+Para compilar el programa escribir en consola: "make tarea3" y luego para correrlo escribir: "./tarea3".
+
+Se asume que en el directorio en donde se ejecute el archivo también se encuentran los archivos "sthread.c" y "sthread.h" de Sthreads y los archivos correspondientes a las matrices.
+
+Para las matrices de 200x200, al crear los threads y llamarlos con la función nos daba un error de memoria por la gran cantidad de threads al mismo tiempo, por lo que para ese caso, la implementación con los threads es diferente(se crea un thread y se termina antes de crear el siguiente). Para las matrices 100x100 y 50x50 SI corren todos los threads al mismo tiempo y se cierran solamente después de haber creado el último. 
+
+-----------------------------------------------------------------------------------------------------
+
+MEDICIONES: 
+
+matriz 50x50:
+
+    Tiempo que demoró en realizar el calculo con threads: 0.071135
+
+    Tiempo que demoró en realizar el calculo sin threads: 0.000824
+
+matriz 100x100:
+
+    Tiempo que demoró en realizar el calculo con threads: 0.287445
+
+    Tiempo que demoró en realizar el calculo sin threads: 0.007968
+
+matriz 200x200:
+
+    Tiempo que demoró en realizar el calculo con threads: 1.425352
+
+    Tiempo que demoró en realizar el calculo sin threads: 0.056094
+
+----------------------------------------------------------------------------------------------------
+
+¿ES EFICIENTE?
+
+Para nuestro caso en particular (matrices 200x200, 100x100 y 50x50 y utilizar un thread por casilla) concluimos que no es eficiente el uso de threads para el calculo de la multiplicación de matrices dado que obtuvimos tiempos mucho mejores al no hacer uso de threads(más de 20 veces más rápido). Esto, consideramos que es producto de la gran cantidad de threads que se inicializan y al tiempo que toma la creación de estos, que no compensan, ya que el calculo del valor correspondiente a la casilla es un calculo que puede considerarse liviano, de forma que la ejecución en un solo tread resulta más ventajosa, sin embargo, se encuentran en internet distintas propuestas que utilizando un número reducido de threads (ej: 4) en donde cada uno calcula los valores de las casillas de ciertos "sectores" de la matriz logran que a medida que el tamaño de las matrices aumenta la implementación con threads se vuelva más eficiente que sin threads. A modo general concluimos que la eficiencia de la implementación con threads o no depende principalmente del cómo se haga implementación de los threads y de los tamaños de las matrices.
