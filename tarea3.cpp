@@ -99,7 +99,7 @@ int main(){
     //INICIAR CRONÓMETRO PARA MULTIPLICACIÓN SIN THREADS
     unsigned t0 = clock();
 
-    //
+    //CAMBIAR MODALIDAD DEL USO DE THREADS EN BASE AL TAMAÑO DE LAS MATRICES(EN EL README SE DETALLA EL PORQUÉ DE ESTO)
     if(tamano > 150){
       for(int a = 0; a < tamano*tamano; a++){
         sthread_create(&threads[a], &multiplicacion, a);
